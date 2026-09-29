@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import { RoleNotFoundException, UserNotFoundException } from '../../common/exceptions';
 import { User } from '../entities/user.entity';
 import { RoleService } from '../role/role.service';
+import { AppLogger } from '../../common/logger/logger.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -18,9 +19,12 @@ export class UserService {
         private readonly userRepository: Repository<User>,
         private readonly roleService: RoleService,
         private readonly configService: ConfigService,
+        private readonly logger: AppLogger,
     ) {}
 
     async create(createUserDto: CreateUserDto): Promise<User> {
+        this.logger.debug(`Iniciando creación de usuario: ${createUserDto.email}`);
+
         const { roleId, ...userData } = createUserDto;
         const role = await this.roleService.findOne(roleId);
         if (!role) {
@@ -40,6 +44,8 @@ export class UserService {
         const savedUser = await this.userRepository.save(user);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { passwordHash: _, ...userWithoutPassword } = savedUser;
+        this.logger.log(`Usuario creado exitosamente con email: ${createUserDto.email}`);
+
         return userWithoutPassword as User;
     }
 

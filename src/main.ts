@@ -2,9 +2,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { AppLogger } from './common/logger/logger.service';
+import { CryptoInterceptor } from './common/interceptors/crypto.interceptors';
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+        bufferLogs: true,
+    });
+
+    const appLogger = app.get(AppLogger);
+    app.useLogger(appLogger);
+    
+    // Usar 'new' en lugar de 'app.get' ya que no está en los providers
+    app.useGlobalInterceptors(new CryptoInterceptor());
 
     app.useGlobalPipes(
         new ValidationPipe({
@@ -14,7 +24,9 @@ async function bootstrap() {
         }),
     );
 
-    await app.listen(process.env.PORT ?? 3000);
+    const port = process.env.PORT ?? 3000;
+    await app.listen(port);
+    appLogger.log(`Servidor iniciado exitosamente en el puerto ${port}`);
 }
 
 bootstrap().catch((error) => {
