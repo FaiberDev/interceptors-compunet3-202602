@@ -5,6 +5,8 @@ import { AppModule } from './app.module';
 import { AppLogger } from './common/logger/logger.service';
 import { CryptoInterceptor } from './common/interceptors/crypto.interceptors';
 
+import { TraceabilityInterceptor } from './common/interceptors/traceability.interceptor';
+
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
         bufferLogs: true,
@@ -14,7 +16,10 @@ async function bootstrap() {
     app.useLogger(appLogger);
     
     // Usar 'new' en lugar de 'app.get' ya que no está en los providers
-    app.useGlobalInterceptors(new CryptoInterceptor());
+    app.useGlobalInterceptors(
+        new CryptoInterceptor(),
+        new TraceabilityInterceptor(appLogger)
+    );
 
     app.useGlobalPipes(
         new ValidationPipe({

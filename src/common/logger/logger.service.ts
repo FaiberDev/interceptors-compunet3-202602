@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { AsyncLocalStorage } from 'async_hooks';
 
 import { Injectable, LoggerService, OnModuleDestroy } from '@nestjs/common';
+
+export const loggerLocalStorage = new AsyncLocalStorage<string>();
 
 @Injectable()
 export class AppLogger implements LoggerService, OnModuleDestroy {
@@ -41,14 +44,27 @@ export class AppLogger implements LoggerService, OnModuleDestroy {
         this.write('VERBOSE', message);
     }
 
-    private write(level: string, message: string, trace?: string) {
+    private write(level: string, message: string, trace?: string, correlationId?: string) {
+        const ctxCorrelationId = loggerLocalStorage.getStore() || correlationId;
         const timestamp = new Date().toISOString();
-        const formattedLog = `[${timestamp}] [${level}] ${message}${trace ? '\n[Stack Trace]: ' + trace : ''}\n`;
+        const formattedLog = `[${timestamp}] [${level}] ${message}${ctxCorrelationId ? ' [CorrelationID: ' + ctxCorrelationId + ']' : ''}${trace ? '\n[Stack Trace]: ' + trace : ''}\n`;
 
         // Escritura persistente en disco
         this.logStream.write(formattedLog);
 
         // Salida formateada en consola
+        console.warn(formattedLog.trim());
+    }
+
+    logWithTrace(correlationId: string, level: string, message: string) {
+        this.write(level, message, undefined, correlationId);
+    }
+
+    logTraceFormat(method: string, url: string, statusCode: number, duration: number, correlationId: string) {
+        const message = `[${method} ${url}] [${statusCode} OK] [Duration: ${duration}ms] [CorrelationID: ${correlationId}]`;
+        const timestamp = new Date().toISOString();
+        const formattedLog = `[${timestamp}] [TRACE] ${message}\n`;
+        this.logStream.write(formattedLog);
         console.warn(formattedLog.trim());
     }
 
